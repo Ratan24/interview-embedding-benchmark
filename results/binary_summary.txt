@@ -1,0 +1,79 @@
+================================================================================
+BINARY PASS/FAIL CLASSIFICATION — PERMANENT RECORD
+Generated: 2026-03-30
+Source: full_results_binary.csv (240 rows, 10 models × 6 conditions × 3 skills)
+Threshold: Pass = grade >= 2 (Mid-level or Senior), Fail = grade < 2
+Classifier: LogisticRegression (nominal, class_weight='balanced')
+================================================================================
+
+1. 10-MODEL BINARY RANKING (Macro F1, avg across 3 skills)
+--------------------------------------------------------------------------------
+condition        C1a    C1b    C2a    C2b     C3     C4   mean
+model                                                         
+openai-large   0.815  0.802  0.830  0.814  0.776  0.765  0.800
+kalm-12b       0.810  0.796  0.822  0.805  0.764  0.750  0.791
+qwen3-8b       0.804  0.790  0.816  0.801  0.756  0.751  0.786
+gemini         0.801  0.787  0.811  0.803  0.748  0.743  0.782
+voyage         0.799  0.782  0.808  0.787  0.758  0.758  0.782
+openai-small   0.790  0.791  0.793  0.789  0.751  0.761  0.779
+qwen3-4b       0.796  0.780  0.786  0.778  0.747  0.735  0.770
+cohere         0.762  0.761  0.775  0.770  0.714  0.722  0.751
+qwen3-0.6b     0.765  0.745  0.764  0.750  0.721  0.735  0.747
+jina-v5-small  0.758  0.749  0.750  0.733  0.719  0.705  0.736
+
+2. 4-CLASS VS BINARY COMPARISON
+--------------------------------------------------------------------------------
+               Binary F1  4-class F1  Diff / Lift
+openai-large       0.800       0.570        0.230
+kalm-12b           0.791       0.565        0.226
+qwen3-8b           0.786       0.567        0.219
+gemini             0.782       0.571        0.211
+voyage             0.782       0.583        0.199
+openai-small       0.779       0.560        0.219
+qwen3-4b           0.770       0.543        0.227
+cohere             0.751       0.541        0.210
+qwen3-0.6b         0.747       0.553        0.194
+jina-v5-small      0.736       0.529        0.207
+
+Average lift: ~0.21 F1 points (binary task is substantially easier)
+
+3. KEY STATISTICS
+--------------------------------------------------------------------------------
+Per-class F1 (averaged across all models):
+  Fail:  0.869
+  Pass:  0.592
+
+Class distribution (across all 3 skills):
+  Fail:  14,663 samples (77.1%)
+  Pass:   4,351 samples (22.9%)
+
+Per-skill breakdown:
+  React:       4,233 Fail / 2,105 Pass (33.2% pass rate)
+  JavaScript:  5,407 Fail /   931 Pass (14.7% pass rate)
+  HTML/CSS:    5,023 Fail / 1,315 Pass (20.7% pass rate)
+
+4. SIGNIFICANCE TESTING (Paired t-test, C2a, 15 folds)
+--------------------------------------------------------------------------------
+openai-large vs voyage:   t=3.7954, p=0.0020 -> SIGNIFICANT (openai-large wins)
+openai-large vs kalm-12b: t=2.3969, p=0.0311 -> SIGNIFICANT (openai-large wins)
+
+The ranking reversal is real and statistically confirmed.
+
+5. WINNING CONDITION FOR BINARY
+--------------------------------------------------------------------------------
+C2a still dominates (Macro F1 = 0.7954, averaged across models).
+Full condition ranking: C2a > C1a > C2b > C1b > C3 > C4
+
+6. KEY INSIGHT: RANKING REVERSAL
+--------------------------------------------------------------------------------
+4-class ordinal:  voyage #1 (0.583), openai-large #3 (0.570)
+Binary pass/fail: openai-large #1 (0.800), voyage #5 (0.782)
+
+Interpretation: Voyage excels at fine-grained semantic distinctions (Junior
+vs Mid vs Senior). OpenAI-Large's higher embedding dimensionality (3072-D
+vs 1024-D) provides superior capacity for the blunter pass/fail boundary.
+
+Dual-use recommendation (hypothesis for future validation):
+  - Screening (pass/fail): openai-large or kalm-12b
+  - Detailed grading: voyage
+================================================================================

@@ -1,0 +1,33 @@
+#!/bin/bash
+# Usage: Before submitting, replace MODEL_KEY with the model you want to run.
+# Example: sbatch slurm/embed_opensource_job.sh
+# Edit the --job-name, --gres, and the python command before submitting.
+#
+# GPU requirements by model:
+#   qwen3-0.6b, jina-v5-small : v100-sxm2 (32GB) is sufficient
+#   qwen3-4b                  : v100-sxm2 (32GB) is sufficient
+#   qwen3-8b                  : a100 (40GB) recommended
+#   kalm-12b                  : a100 (80GB) required
+#
+#SBATCH --job-name=micro1_embed_MODEL_KEY
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:v100-sxm2:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64GB
+#SBATCH --time=12:00:00
+#SBATCH --output=/projects/PalikotLab/micro1/logs/embed_MODEL_KEY_%j.out
+#SBATCH --error=/projects/PalikotLab/micro1/logs/embed_MODEL_KEY_%j.err
+
+module purge
+module load explorer anaconda3/2024.06 cuda/12.1.1
+
+export HF_HOME=/projects/PalikotLab/hf_cache
+export TRANSFORMERS_CACHE=/projects/PalikotLab/hf_cache
+export HF_DATASETS_CACHE=/projects/PalikotLab/hf_cache
+
+source activate /projects/PalikotLab/envs/micro1
+
+cd /projects/PalikotLab/micro1
+
+python embed_opensource.py --model MODEL_KEY
