@@ -1,5 +1,5 @@
 # Issue #1 — Interview Length × Hazard of Failing
-### A complete methodology and findings report
+*A complete methodology and findings report*
 
 **Repository:** `Ratan24/interview-embedding-benchmark`
 **Issue:** [#1 — Create a plot of Interview length × hazard of failing](https://github.com/Ratan24/interview-embedding-benchmark/issues/1)
@@ -192,7 +192,7 @@ Where TF-IDF treats "JavaScript" and "JS" as completely unrelated dimensions, an
 
 The benchmark pipeline (`embed_api.py`, `embed_opensource.py`) produced embeddings for **10 models × 6 conditions = 60 vector files**, each accompanied by a JSON of candidate IDs to keep ordering consistent. They live at:
 
-```
+```text
 /Users/ratanpyla/Desktop/Micro1 - Emil Palikot/AI_recruiter_internal/
     experiments/embeddings/benchmark_2026/vectors/
 ```
@@ -215,7 +215,7 @@ For Issue #1 we use two models:
 
 C2a is "full Q&A, *per skill*" — for each candidate, the parser produces three text blobs: one with the React Q&A, one with the JavaScript Q&A, one with the HTML/CSS Q&A. Each blob is embedded separately, so the on-disk shape is `(N_candidates, 3 skills, embedding_dim)`. To use this as a single feature vector for the binary classifier, we **flatten** the three skill embeddings end-to-end into one vector per candidate:
 
-```
+```text
 openai-large + C2a:  (6338, 3, 3072)  → flatten → (6338, 9216)
 voyage      + C2a:  (6338, 3, 1024)  → flatten → (6338, 3072)
 ```
@@ -263,7 +263,7 @@ This is the **OOF predictions** array. It is what makes the downstream decile an
 
 Without `class_weight='balanced'`, a LogReg on 95.5%-fail data would learn to almost-always predict "fail", because that minimises overall log-loss. The `'balanced'` setting tells the optimiser to *re-weight* each example so the total loss contribution of the minority class equals the total loss contribution of the majority class. The actual weights `sklearn` uses are:
 
-```
+```text
 weight_class = n_samples / (n_classes * n_class_samples)
             = 6228 / (2 * 283)   ≈  11.0  for pass
             = 6228 / (2 * 5945)  ≈   0.52 for fail
@@ -304,7 +304,7 @@ This gives ten ordered, equal-sized buckets. Every decile in our analysis has be
 
 For each decile and each length metric, we compute the sample mean and a 95% Student's t confidence interval:
 
-```
+```text
 SEM   = stdev(values) / sqrt(n)
 half  = t.ppf(0.975, df = n - 1) * SEM     # ≈ 1.96 * SEM for n ≈ 620
 mean  ± half

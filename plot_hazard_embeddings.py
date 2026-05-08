@@ -29,6 +29,7 @@ Plus a comparison plot stitched against the TF-IDF baseline:
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 
@@ -52,9 +53,12 @@ VETTING_CSV = BASE_DIR / "data" / "Ai-Vetted-ranked.csv"
 FIGURES_DIR = BASE_DIR / "figures"
 RESULTS_DIR = BASE_DIR / "results"
 
+# Where the pre-computed embedding vectors live.  Defaults to the
+# repo-local vectors/ directory (matching the rest of the pipeline).
+# Override with the HAZARD_VECTORS_DIR env var when the embeddings are
+# stored outside the repo (e.g. in a sibling research folder).
 VECTORS_DIR = Path(
-    "/Users/ratanpyla/Desktop/Micro1 - Emil Palikot/AI_recruiter_internal"
-    "/experiments/embeddings/benchmark_2026/vectors"
+    os.environ.get("HAZARD_VECTORS_DIR", BASE_DIR / "vectors")
 )
 
 # Models to evaluate.  Each entry is (model_key, condition).
@@ -212,6 +216,13 @@ def load_embedding_features(model, condition):
     """Return (X, ids) for the given (model, condition) embedding."""
     npy_path = VECTORS_DIR / f"{model}_{condition}.npy"
     ids_path = VECTORS_DIR / f"{model}_{condition}_ids.json"
+    if not npy_path.exists() or not ids_path.exists():
+        raise FileNotFoundError(
+            f"Could not find {npy_path.name} or {ids_path.name} under "
+            f"{VECTORS_DIR}.  Set the HAZARD_VECTORS_DIR environment "
+            f"variable to the directory containing the benchmark's "
+            f"pre-computed *.npy / *_ids.json files."
+        )
     log.info("Loading %s …", npy_path.name)
     X = np.load(npy_path)
     ids = json.load(open(ids_path))
@@ -484,6 +495,7 @@ def run_for_model(df_full, model, condition):
     df["decile"] = assign_deciles(p_fail)
 
     summary = summarise_by_decile(df)
+    summary["oof_auc"] = auc
 
     summary_path = RESULTS_DIR / f"hazard_decile_summary__{model}.csv"
     summary.to_csv(summary_path, index=False)
@@ -531,10 +543,16 @@ def main():
     if tfidf_path.exists():
         log.info("Loading TF-IDF baseline from %s", tfidf_path)
         tfidf_summary = pd.read_csv(tfidf_path)
-        # AUC is logged but not stored in CSV — recompute or hard-set.
-        # We hard-set here; the TF-IDF run logs its OOF AUC.
-        tfidf_auc = 0.877
-        summaries.append(("tfidf + C4 text  (baseline)", tfidf_summary, tfidf_auc))
+        if "oof_auc" not in tfidf_summary.columns:
+            log.warning(
+                "TF-IDF summary CSV is missing the oof_auc column — "
+                "re-run plot_hazard.py to refresh it; skipping baseline overlay."
+            )
+        else:
+            tfidf_auc = float(tfidf_summary["oof_auc"].iloc[0])
+            summaries.append(
+                ("tfidf + C4 text  (baseline)", tfidf_summary, tfidf_auc)
+            )
 
     plot_comparison(
         summaries, df_full,

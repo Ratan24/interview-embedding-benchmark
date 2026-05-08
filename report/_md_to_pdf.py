@@ -5,7 +5,9 @@ Usage:
     python3 _md_to_pdf.py <input.md> <output.pdf>
 """
 
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -189,10 +191,43 @@ def render_html(md_path):
     return HTML_TEMPLATE.format(title=title, css=CSS, body=body)
 
 
-def html_to_pdf(html_path, pdf_path):
-    chrome = (
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+def find_chrome():
+    """Locate a Chrome/Chromium binary across macOS, Linux, and Windows.
+
+    The CHROME_BINARY env var, if set, takes precedence.
+    """
+    override = os.environ.get("CHROME_BINARY")
+    if override:
+        if Path(override).exists():
+            return override
+        raise FileNotFoundError(
+            f"CHROME_BINARY={override!r} does not exist."
+        )
+
+    candidates = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    ]
+    for cmd in (
+        "google-chrome", "google-chrome-stable",
+        "chromium", "chromium-browser", "chrome",
+    ):
+        path = shutil.which(cmd)
+        if path:
+            candidates.append(path)
+    for c in candidates:
+        if c and Path(c).exists():
+            return c
+    raise RuntimeError(
+        "Could not locate a Chrome or Chromium binary.  Install one, "
+        "or set the CHROME_BINARY environment variable to its path."
     )
+
+
+def html_to_pdf(html_path, pdf_path, timeout_sec=120):
+    chrome = find_chrome()
     cmd = [
         chrome,
         "--headless=new",
@@ -203,7 +238,9 @@ def html_to_pdf(html_path, pdf_path):
         f"--print-to-pdf={pdf_path}",
         f"file://{html_path}",
     ]
-    subprocess.run(cmd, check=True, capture_output=True)
+    subprocess.run(
+        cmd, check=True, capture_output=True, timeout=timeout_sec
+    )
 
 
 def main(md_arg, pdf_arg):

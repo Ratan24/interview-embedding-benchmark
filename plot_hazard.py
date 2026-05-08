@@ -444,6 +444,9 @@ def main():
     df["decile"] = assign_deciles(p_fail)
 
     summary, _ = summarise_by_decile(df)
+    # Persist the classifier's OOF AUC alongside the per-decile rows so
+    # downstream comparison plots can pick it up without hard-coding.
+    summary["oof_auc"] = auc
 
     summary_path = RESULTS_DIR / "hazard_decile_summary.csv"
     summary.to_csv(summary_path, index=False)
