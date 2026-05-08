@@ -33,6 +33,7 @@ Benchmarking 10 embedding models × 6 transcript parsing conditions for predicti
 ├── plot_truncation.py           # Truncation curve plot
 ├── plot_hazard.py               # Step 5a: Hazard-of-failing plot, TF-IDF baseline
 ├── plot_hazard_embeddings.py    # Step 5b: Hazard-of-failing plot, real embeddings
+├── stopping_agent.py            # Step 6:  Sequential pass/fail probe + stopping rule
 ├── extract_sample.py            # Extract sample transcripts for review
 │
 ├── results/                     # Benchmark metrics (committed)
@@ -94,6 +95,8 @@ This generates `parsed/labels.csv` and `parsed/segments_C*.json` (6 conditions).
                                     results/hazard_decile_summary.csv
    plot_hazard_embeddings.py      →  figures/hazard_of_failing__{model}.png
                                     results/hazard_decile_summary__{model}.csv
+6. stopping_agent.py             →  figures/stopping_agent_*.png
+                                    results/stopping_agent_*.csv
 ```
 
 ## Hazard-of-Failing Diagnostic
@@ -127,6 +130,49 @@ spend the same wall-clock time but say much less, in many more, much
 shorter turns.  Full discussion in [`report/issue1_findings.md`](report/issue1_findings.md)
 (memo) and [`report/issue1_analysis_report.md`](report/issue1_analysis_report.md)
 (long-form methodology).
+
+## Stopping-Agent Diagnostic
+
+A second downstream diagnostic adapts Manzoor, Ascarza & Netzer (2025)
+"Learning When to Quit in Sales Conversations" to predicting binary
+`is_passed` from transcript prefixes.  The candidate is evaluated at six
+checkpoints (256, 512, 1024, 2048, 4096 candidate-only `cl100k_base`
+tokens, plus the full transcript).  At each checkpoint we concatenate
+the pre-computed Voyage `C3` embedding with five position features
+(tokens consumed, candidate-words-so-far, n-messages-so-far,
+words-per-turn, fraction-of-overall-median-tokens) and fit a 5-fold
+stratified-CV class-balanced logistic regression.
+
+Outputs of `stopping_agent.py`:
+
+- `results/stopping_agent_per_checkpoint.csv` — per-checkpoint AUC,
+  PR-AUC (pass class), Macro-F1, recall@P=0.95, plus an
+  embeddings-only ablation per row.
+- `results/stopping_agent_oof_predictions.csv` — out-of-fold P(fail)
+  per (candidate, checkpoint).
+- `results/stopping_agent_threshold_sweep.csv` — 121-row sweep over
+  asymmetric (τ_fail, τ_pass) commit thresholds.
+- `figures/stopping_agent_{auc_curve,savings,threshold_heatmap}.png`.
+
+**Headline result.** A fail-only stopping rule (commit fail when
+`P(fail) ≥ 0.5 + τ_fail`, never commit pass early, fall back to the
+full transcript otherwise) achieves **92.0% accuracy at a mean of 286
+tokens consumed per candidate**, vs. 90.1% accuracy at 1172 tokens for
+the always-full baseline — a 76% reduction in tokens with a 1.9
+percentage-point absolute accuracy improvement.  The accuracy gain is
+partly an artefact of the 4.6% positive base rate (the asymmetric rule
+exploits the prior; a calibrated full baseline would close most of
+the gap), so the robust deliverable is the **token savings**.  AUC
+saturates by ~1024 tokens.  Full discussion in
+[`report/issue2_findings.md`](report/issue2_findings.md).
+
+To run, point `HAZARD_VECTORS_DIR` at the benchmark's `vectors/`
+directory:
+
+```bash
+HAZARD_VECTORS_DIR=/path/to/benchmark_2026/vectors \
+  python3 stopping_agent.py
+```
 
 ## Models
 
