@@ -31,11 +31,13 @@ Benchmarking 10 embedding models × 6 transcript parsing conditions for predicti
 ├── binary_stats.py              # Binary significance tests
 ├── visualize.py                 # Confusion matrix heatmaps
 ├── plot_truncation.py           # Truncation curve plot
+├── plot_hazard.py               # Step 5a: Hazard-of-failing plot, TF-IDF baseline
+├── plot_hazard_embeddings.py    # Step 5b: Hazard-of-failing plot, real embeddings
 ├── extract_sample.py            # Extract sample transcripts for review
 │
 ├── results/                     # Benchmark metrics (committed)
 ├── figures/                     # Generated plots (committed)
-├── report/                      # LaTeX report (committed)
+├── report/                      # LaTeX report + analysis memos (committed)
 ├── slurm/                       # HPC job scripts for Discovery cluster
 ├── data/                        # Raw data (gitignored — see data/README.md)
 ├── parsed/                      # Parsed conditions (gitignored, regenerable)
@@ -88,7 +90,43 @@ This generates `parsed/labels.csv` and `parsed/segments_C*.json` (6 conditions).
    binary_stats.py                →  (stdout — binary significance)
    visualize.py                   →  figures/confusion_*.png
    plot_truncation.py             →  figures/truncation_curve.png
+5. plot_hazard.py                →  figures/hazard_of_failing*.png
+                                    results/hazard_decile_summary.csv
+   plot_hazard_embeddings.py      →  figures/hazard_of_failing__{model}.png
+                                    results/hazard_decile_summary__{model}.csv
 ```
+
+## Hazard-of-Failing Diagnostic
+
+A downstream diagnostic asks: in our AI-paced interview protocol, does the
+call duration shorten for candidates likely to fail (as it does in the
+human-paced interviewer literature)?
+
+Candidates are ranked by out-of-fold predicted P(fail) from a 5-fold
+stratified, class-balanced logistic regression and binned into ten
+equal-sized risk deciles.  Mean call duration (and three companion length
+metrics — candidate words, transcript tokens, message count) is reported
+per decile with 95% confidence intervals.
+
+Two implementations:
+
+- **`plot_hazard.py`** — TF-IDF (1+2-grams, 20k features) on the full Q&A
+  text.  Self-contained, no API keys needed; useful as a baseline.
+- **`plot_hazard_embeddings.py`** — loads pre-computed `*.npy` vectors
+  from the benchmark pipeline (`openai-large + C2a` and `voyage + C2a` by
+  default) and runs the same probe on the dense representation.  Produces
+  per-model figures plus a three-classifier overlay vs. the TF-IDF
+  baseline.
+
+**Headline result.** Average call duration is essentially flat across the
+ten risk deciles (~5–10% swing, vs. ~75% in the human-paced reference
+plot), confirming that the protocol does not shorten for likely-to-fail
+candidates.  However, candidate word count drops by ~3× from decile 1 to
+decile 10 while the message count rises by ~2× — failing candidates
+spend the same wall-clock time but say much less, in many more, much
+shorter turns.  Full discussion in [`report/issue1_findings.md`](report/issue1_findings.md)
+(memo) and [`report/issue1_analysis_report.md`](report/issue1_analysis_report.md)
+(long-form methodology).
 
 ## Models
 

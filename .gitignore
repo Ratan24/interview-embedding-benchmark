@@ -32,3 +32,6 @@ report/*.out
 report/*.synctex.gz
 report/*.fls
 report/*.fdb_latexmk
+
+# Markdown→PDF intermediates
+report/*.html
