@@ -35,3 +35,7 @@ report/*.fdb_latexmk
 
 # Markdown→PDF intermediates
 report/*.html
+
+# Inspection outputs containing real candidate content
+report/inspection_long_high_risk.csv
+report/inspection_long_high_risk_transcripts.md
